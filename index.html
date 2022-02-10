@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="css/reset.css">
+
+</head>
+<style>
+    * {
+        outline: 1px solid blue;
+
+    }
+
+    img {
+        width: 100%;
+    }
+
+    .logo {
+        width: 30%;
+        margin: auto;
+
+    }
+
+
+
+
+    @media (min-width: 768px)
+
+    /* and (max-width: 979px) */
+        {
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        nav {
+            width: 20%;
+        }
+
+        section {
+            width: 80%;
+        }
+
+        .chart_container {
+            width: 60%;
+            margin: auto;
+        }
+
+    }
+
+    /* nav {
+        width: 30%;
+    }
+
+    section {
+        width: 70%;
+    } */
+</style>
+
+<body>
+
+    <div class="container">
+        <nav>
+            <!-- <div class="logo" id="logo">
+                <img src="img/taipeilogo.png" alt="">
+            </div> -->
+
+        </nav>
+        <section>
+            <select id="district_select" style="width: 100%" name="district">
+
+            </select>
+
+            <div class="chart_container">
+                <canvas id="myChart"></canvas>
+            </div>
+
+        </section>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"
+        integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI=" crossorigin="anonymous"></script>
+    <script src=" https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        'use strict';
+        setChart();
+
+        // showLoading();
+        // fetch 資料回來
+        // 整理資料
+        // 分配行政區到下拉選單
+        // 設定圖表資料
+        // 監聽下拉選單on change 事件
+
+
+
+        async function setChart() {
+            // initDistrictSelect();
+            $('#district_select').select2();
+            const data = await fetchLivingData().catch(error => {
+                console.log('外error', error)
+            });
+            console.log('data', data);
+            const livingRawData = data.result.records;
+            const taipeiDistricts = arrangeTaipeiDistricts(livingRawData)
+            setDistrictDropdown(taipeiDistricts);
+            const arrangedTaipeiLivingData = arrangeTaipeiLivingData(livingRawData);
+            saveDataIntoSessionStorage(arrangedTaipeiLivingData);
+            const currentDistrict = getCurrentSelectDistrict();
+            const { maleArr, femaleArr } = getSingleDistrictLivingData(currentDistrict);
+            console.log('{ maleArr, femaleArr }', { maleArr, femaleArr })
+            // updateBarChart(maleArr, femaleArr)
+            const ctx = document.getElementById('myChart');
+            const myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        "共同生活戶",
+                        "獨立生活戶"
+                    ],
+                    datasets: [
+                        {
+                            label: "男",
+                            backgroundColor: "blue",
+                            borderColor: "red",
+                            borderWidth: 1,
+                            data: maleArr
+                        },
+                        {
+                            label: "女",
+                            backgroundColor: "pink",
+                            borderColor: "blue",
+                            borderWidth: 1,
+                            data: femaleArr
+                        },
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    legend: {
+                        position: "top"
+                    },
+                    title: {
+                        display: true,
+                        text: "Chart.js Bar Chart"
+                    },
+                }
+            });
+
+            // hideLoading();
+            $('#district_select').on('change', function () {
+                console.log('hi')
+                const currentDistrict = getCurrentSelectDistrict();
+                const { maleArr, femaleArr } = getSingleDistrictLivingData(currentDistrict);
+                console.log('{ maleArr, femaleArr }', { maleArr, femaleArr })
+                updateBarChart(myChart, maleArr, femaleArr)
+            })
+
+        }
+
+        async function fetchLivingData() {
+            const response = await fetch('https://od.moi.gov.tw/api/v1/rest/datastore/301000000A-000082-045', {
+                method: 'GET',
+            })
+            const data = await response.json();
+            return data;
+        }
+
+        function getCurrentSelectDistrict() {
+            console.log('value', $('#district_select').val())
+            const district = $('#district_select').val();
+            return district;
+        }
+
+        function arrangeTaipeiDistricts(livingRawData) {
+            let taipeiDistricts = filterOutTaipeiLivingData(livingRawData);
+            console.log('taipeiDistricts', taipeiDistricts);
+            taipeiDistricts = taipeiDistricts.reduce((accumulator, currentValue) => {
+
+                if (accumulator.indexOf(currentValue.site_id) === -1) {
+                    accumulator.push(currentValue.site_id)
+                }
+                return accumulator
+            }, [])
+
+            return taipeiDistricts
+        }
+        function arrangeTaipeiLivingData(livingRawData) {
+            let taipeiLivingData = filterOutTaipeiLivingData(livingRawData);
+            let districtObjs = taipeiLivingData.reduce((finalObj, currentObj) => {
+                // console.log('currentObj', currentObj);
+                let district = currentObj.site_id;
+                // console.log('finalObj', finalObj)
+                if (!finalObj[district]) {
+                    finalObj[district] = {
+                        male: {
+                            ordinary: parseInt(currentObj.household_ordinary_m, 10),
+                            single: parseInt(currentObj.household_single_m, 10)
+                        },
+                        female: {
+                            ordinary: parseInt(currentObj.household_ordinary_f, 10),
+                            single: parseInt(currentObj.household_single_f, 10)
+                        }
+                    }
+
+                } else {
+
+                    finalObj[district]['male']['ordinary'] += parseInt(currentObj.household_ordinary_m, 10);
+                    finalObj[district]['male']['single'] += parseInt(currentObj.household_single_m, 10);
+                    finalObj[district]['female']['ordinary'] += parseInt(currentObj.household_ordinary_f, 10);
+                    finalObj[district]['female']['single'] += parseInt(currentObj.household_single_f, 10);
+                }
+                return finalObj;
+
+            }, {})
+            console.log('districtObjs', districtObjs);
+            return districtObjs;
+
+        }
+
+        function setDistrictDropdown(districts) {
+            console.log('districts', districts);
+            const districtSelect = document.getElementById('district_select');
+            const districtArr = districts.map((district) => {
+                const displayDistrict = district.replace('臺北市', '')
+                return {
+                    id: district,
+                    text: displayDistrict
+                }
+            })
+
+
+            $('#district_select').select2({
+                containerCss: { "display": "block" },
+                data: districtArr
+            });
+
+
+        }
+
+        function filterOutTaipeiLivingData(livingRawData) {
+            let taipeiDistrictsData = livingRawData.filter((item) => {
+                return item.site_id.includes('臺北')
+            })
+            return taipeiDistrictsData
+        }
+
+        function saveDataIntoSessionStorage(arrangedTaipeiLivingData) {
+            const taipeiLivingData = JSON.stringify(arrangedTaipeiLivingData)
+            sessionStorage.setItem("livingData", taipeiLivingData);
+
+        }
+
+        function getDataFromSessionStorage() {
+            const taipeiLivingData = JSON.parse(sessionStorage.getItem("livingData"));
+            return taipeiLivingData;
+        }
+
+        function getSingleDistrictLivingData(district) {
+            const singleDistrictData = getDataFromSessionStorage()[district];
+            const maleArr = [singleDistrictData.male.ordinary, singleDistrictData.male.single];
+            const femaleArr = [singleDistrictData.female.ordinary, singleDistrictData.female.single]
+            const livingObj = {
+                maleArr: maleArr,
+                femaleArr: femaleArr
+            };
+            return livingObj;
+        }
+
+
+
+        function updateBarChart(myChart, maleArr, femaleArr) {
+            myChart.data.datasets[0].data = maleArr;
+            myChart.data.datasets[1].data = femaleArr;
+            myChart.update();
+        }
+
+
+
+
+
+
+
+    </script>
+</body>
+
+</html>
