@@ -26,6 +26,9 @@
                     </div>
                 </div>
             </div>
+            <div class="error_container" id="error_container">
+                <p>無法取得資料。</p>
+            </div>
             <div class="select_container" id="select_container">
                 <span class="select_title">地區：</span>
                 <select id="district_select" style="width: 35%" name="district"></select>
@@ -46,10 +49,12 @@
         setChart();
         async function setChart() {
             showLoading();
-            const data = await fetchLivingData().catch(error => {
-                console.log('error', error)
-            });
-
+            const data = await fetchLivingData();
+            if (!data) {
+                hideLoading();
+                showErrorMsg();
+                return
+            }
             const livingRawData = data.result.records;
             const taipeiDistricts = arrangeTaipeiDistricts(livingRawData)
             setDistrictDropdown(taipeiDistricts);
@@ -88,7 +93,6 @@
                     },
                     responsive: true,
                     maintainAspectRatio: false,
-
                 }
             });
             hideLoading();
@@ -98,36 +102,40 @@
                 const { maleArr, femaleArr } = getSingleDistrictLivingData(currentDistrict);
                 updateBarChart(barChart, maleArr, femaleArr)
             })
-
         }
 
         async function fetchLivingData() {
-            const response = await fetch('https://od.moi.gov.tw/api/v1/rest/datastore/301000000A-000082-045', {
-                method: 'GET',
-                headers: new Headers({
-                    'Content-Type': 'application/json'
-                }),
-                mode: 'no-cors'
-            })
-            const data = await response.json();
-            console.log('data', data);
+            const apiUrl = "https://od.moi.gov.tw/api/v1/rest/datastore/301000000A-000082-045";
+            const fallbackApiUrl = 'apiData.json';
+            const fetchData = async (apiEndpoint) => {
+                const res = await fetch(apiEndpoint, {
+                    method: 'GET',
+                });
+                return res.json();
+            }
+            let data = false;
+            try {
+                data = await fetchData(apiUrl);
+            } catch (err) {
+                console.log('api retrieval failed. Try fallback');
+                try {
+                    data = await fetchData(fallbackApiUrl);
+                } catch (err) {
+                    console.log('all api data retrieval failed');
+                    data = false;
+                }
+            }
             return data;
-
-
-
         }
 
         function getCurrentSelectDistrict() {
-            console.log('value', $('#district_select').val())
             const district = $('#district_select').val();
             return district;
         }
 
         function arrangeTaipeiDistricts(livingRawData) {
             let taipeiDistricts = filterOutTaipeiLivingData(livingRawData);
-
             taipeiDistricts = taipeiDistricts.reduce((accumulator, currentValue) => {
-
                 if (accumulator.indexOf(currentValue.site_id) === -1) {
                     accumulator.push(currentValue.site_id)
                 }
@@ -136,6 +144,7 @@
 
             return taipeiDistricts
         }
+
         function arrangeTaipeiLivingData(livingRawData) {
             let taipeiLivingData = filterOutTaipeiLivingData(livingRawData);
             let districtObjs = taipeiLivingData.reduce((finalObj, currentObj) => {
@@ -170,7 +179,6 @@
         }
 
         function setDistrictDropdown(districts) {
-            console.log('districts', districts);
             const districtSelect = document.getElementById('district_select');
             const districtArr = districts.map((district) => {
                 const displayDistrict = district.replace('臺北市', '')
@@ -236,7 +244,9 @@
             $('#loading_container').hide();
         }
 
-
+        function showErrorMsg() {
+            $('#error_container').show();
+        }
 
 
 
