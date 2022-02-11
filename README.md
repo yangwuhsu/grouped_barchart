@@ -1,6 +1,6 @@
 # grouped_barchart
 
-### 使用技術：
+### 使用函式庫：
 
 1. chart.js
 2. jQuery
