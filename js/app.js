@@ -3,7 +3,7 @@ setChart();
 async function setChart() {
   showLoading();
   const data = await fetchLivingData();
-  console.log("get data res:", data);
+
   if (!data) {
     hideLoading();
     showErrorMsg();
@@ -68,12 +68,10 @@ async function fetchLivingData() {
   let data = false;
   try {
     data = await fetchData(apiUrl);
-    console.log("try official api success:", data);
   } catch (err) {
     console.log("api retrieval failed. Try fallback");
     try {
       data = await fetchData(fallbackApiUrl);
-      console.log("try fallback api success:", data);
     } catch (err) {
       console.log("all api data retrieval failed");
       data = false;
