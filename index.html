@@ -103,7 +103,6 @@
         nav {
             width: 20%;
             min-width: 200px;
-            /* height: 30vh; */
         }
 
         section {
@@ -114,9 +113,8 @@
         .chart_container {
             width: 60%;
             margin: auto;
-
+            height: 45vh;
         }
-
     }
 
 
@@ -130,7 +128,6 @@
         transform: translate(-50%, -50%);
         display: none;
     }
-
 
     @keyframes ldio-ca7jarzbr8 {
         0% {
@@ -163,7 +160,6 @@
         display: inline-block;
         overflow: hidden;
         background: rgba(0, 0, 0, 0);
-
     }
 
     .ldio-ca7jarzbr8 {
@@ -186,8 +182,6 @@
 </style>
 
 <body>
-
-
     <div class="container">
         <nav>
             <div class="logo" id="logo">
@@ -203,16 +197,13 @@
                     </div>
                 </div>
             </div>
-
             <div class="select_container" id="select_container">
                 <span class="select_title">地區：</span>
                 <select id="district_select" style="width: 35%" name="district"></select>
             </div>
-
             <div class="chart_container">
                 <canvas id="barChart"></canvas>
             </div>
-
         </section>
     </div>
 
@@ -225,13 +216,11 @@
     <script>
         'use strict';
         setChart();
-
         async function setChart() {
             showLoading();
             const data = await fetchLivingData().catch(error => {
                 console.log('error', error)
             });
-
             const livingRawData = data.result.records;
             const taipeiDistricts = arrangeTaipeiDistricts(livingRawData)
             setDistrictDropdown(taipeiDistricts);
@@ -265,14 +254,12 @@
                 options: {
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: false
                         }
                     },
                     responsive: true,
                     maintainAspectRatio: false,
-                    legend: {
-                        position: "top"
-                    },
+
                 }
             });
             hideLoading();
