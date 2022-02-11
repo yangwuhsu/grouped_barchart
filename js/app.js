@@ -151,7 +151,7 @@ function setDistrictDropdown(districts) {
 
   $("#district_select").select2({
     containerCss: { display: "block" },
-    width: "60%",
+    width: "65%",
     data: districtArr,
     minimumResultsForSearch: Infinity,
   });
